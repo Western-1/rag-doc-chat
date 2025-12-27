@@ -86,7 +86,7 @@ Once running, the following endpoints are available:
 | `/chat/playground` | LangServe UI for RAG interaction |
 | `POST /ingest` | Upload and index PDF documents |
 
-![ingest](Images/ingest.png)
+![ingest](images/ingest.png)
 
 ## Data Ingestion Flow
 - PDFs are parsed using `PdfReader`
@@ -96,7 +96,7 @@ Once running, the following endpoints are available:
 - Embeddings are generated and stored in Qdrant
 - Cosine similarity is used for nearest‑neighbor search
 
-![LLM Chat answer](Images/playground_chat.png)
+![LLM Chat answer](images/playground_chat.png)
 
 ## MLOps Considerations
 - **Reproducibility:** Fully containerized environment
