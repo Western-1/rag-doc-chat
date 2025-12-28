@@ -6,7 +6,7 @@ from qdrant_client import QdrantClient, models
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
-from src.config import *
+from src.config import EMBEDDING_MODEL, LLM_MODEL, QDRANT_URL, COLLECTION_NAME
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-import logging
 from datasets import Dataset
 from ragas import evaluate, RunConfig
 from ragas.metrics import Faithfulness, AnswerRelevancy, ContextUtilization
