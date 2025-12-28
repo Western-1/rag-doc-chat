@@ -3,38 +3,24 @@ kind: Deployment
 metadata:
   name: rag-deployment
 spec:
-  replicas: 1  # Start with 1 replica, scale later
+  replicas: 1
   selector:
     matchLabels:
-      app: rag-service
+      app: rag
   template:
     metadata:
       labels:
-        app: rag-service
+        app: rag
     spec:
       containers:
-      - name: rag-container
-        image: rag-service:local
-        ports:
-        - containerPort: 8000
-        envFrom:
-        - configMapRef: 
-            name: rag-config  
-        volumeMounts:
-        - mountPath: /app/qdrant_db
-          name: qdrant-storage
-        livenessProbe:
-          httpGet:
-            path: /docs
-            port: 8000
-          initialDelaySeconds: 10
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /docs
-            port: 8000
-          initialDelaySeconds: 10
-          periodSeconds: 10
-      volumes:
-      - name: qdrant-storage
-        emptyDir: {} 
+        - name: rag-container
+          image: rag-service:local
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: QDRANT_URL
+              value: "http://qdrant:6333"
+          envFrom:
+            - secretRef:
+                name: rag-secrets

@@ -4,9 +4,8 @@ metadata:
   name: rag-service
 spec:
   selector:
-    app: rag-service
+    app: rag
   ports:
-  - protocol: TCP
-    port: 8000
-    targetPort: 8000
-  type: NodePort
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
