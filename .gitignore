@@ -27,3 +27,4 @@ chroma_db/
 data/
 downloads/
 qdrant_db
+minikube-linux-amd64

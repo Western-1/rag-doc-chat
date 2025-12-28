@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rag-deployment
+spec:
+  replicas: 1  # Start with 1 replica, scale later
+  selector:
+    matchLabels:
+      app: rag-service
+  template:
+    metadata:
+      labels:
+        app: rag-service
+    spec:
+      containers:
+      - name: rag-container
+        image: rag-service:local
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - configMapRef: 
+            name: rag-config  
+        volumeMounts:
+        - mountPath: /app/qdrant_db
+          name: qdrant-storage
+        livenessProbe:
+          httpGet:
+            path: /docs
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /docs
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      - name: qdrant-storage
+        emptyDir: {} 
