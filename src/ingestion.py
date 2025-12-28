@@ -1,37 +1,41 @@
 import logging
+import re
 from io import BytesIO
 from pypdf import PdfReader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from src.rag import vector_store
+from src.rag import engine
 from src.config import CHUNK_SIZE, CHUNK_OVERLAP
 
 logger = logging.getLogger(__name__)
 
+def clean_text(text: str) -> str:
+    """Видаляє шум Wikipedia: [1], [show], [edit] та зайві пробіли."""
+    text = text.replace('\x00', '')
+    text = re.sub(r'\[.*?\]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
 def process_pdf(file_content: bytes, filename: str):
-    """
-    Background task for ETL: Extract -> Transform (Split) -> Load (Embed & Store).
-    """
     try:
         logger.info(f"Starting ingestion for {filename}")
         file_stream = BytesIO(file_content)
         reader = PdfReader(file_stream)
-        text = "".join(page.extract_text() or "" for page in reader.pages)
+        
+        raw_text = "".join(page.extract_text() or "" for page in reader.pages)
+        cleaned_text = clean_text(raw_text)
 
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=CHUNK_SIZE,
             chunk_overlap=CHUNK_OVERLAP
         )
         
-        chunks = splitter.split_text(text)
+        chunks = splitter.split_text(cleaned_text)
         
         if chunks:
-            vector_store.add_texts(chunks)
+            engine.vector_store.add_texts(chunks)
             logger.info(f"Successfully indexed {len(chunks)} chunks from {filename}")
             return len(chunks)
-        
-        logger.warning(f"No text found in {filename}")
         return 0
-
     except Exception as e:
         logger.error(f"Error processing {filename}: {e}")
         raise e
