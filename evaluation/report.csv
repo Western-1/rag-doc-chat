@@ -1,0 +1,16 @@
+question,answer,contexts,faithfulness,answer_relevancy,context_utilization
+Who initiated the project that led to PDF?,John Warnock.,"[""Format description of the PDF family , PDF/A , PDF/X  from Library of Congress\nTech notes from Adobe\nAdobe PDF 101: Summary of PDF  at the Wayback Machine (archived 2010-10-07)\nAdobe: PostScript vs. PDF  at the Wayback Machine (archived 2016-04-13) – Official introductory comparison of PS, EPS vs.\nPDF.\nPDF Reference and Adobe Extensions to the PDF Specification  at the Wayback Machine (archived 2021-01-16)\nArticles\nPortable Document Format: An Introduction for Programmers (1999)  from MacTech – Introduction to PDF vs. PostScript and\nPDF internals (up to v1.3)\nJohn Warnock's 'Camelot' signalled birth of PDF (2002)  at the Wayback Machine (archived 2019-04-22) from Planet PDF that\ndescribes the paper in which John Warnock outlined the project that created PDF\nVideos""]",1.0,0.8108452531650231,0.9999999999
+What is the ISO standard number for PDF?,"ISO 32000-1, ISO 32000-2.","[""normative and indispensable for the full implementation of the ISO 32000-1 specification.[12] These proprietary technologies are not\nstandardized, and their specification is published only on Adobe's website.[13][14][15] Many of them are not supported by popular third-\nparty implementations of PDF.\nISO published version 2.0 of PDF, ISO 32000-2 in 2017, available for purchase, replacing the free specification provided by Adobe.[16]\nIn December 2020, the second edition of PDF 2.0, ISO 32000-2:2020, was published, with clarifications, corrections, and critical\nupdates to normative references[17] (ISO 32000-2 does not include any proprietary technologies as normative references).[18] In April\n2023 the PDF Association made ISO 32000-2 available for download free of charge.[16]""]",1.0,0.8594916653082111,0.9999999999
+On which language is the PDF structure based?," References
+This article incorporates material
+from the ISO website. This
+article uses material from
+Wikimedia Commons, which is
+licensed under a Creative
+Commons license.
+
+Licensed under the
+Creative Commons
+Attribution-ShareAlike
+License; additional terms
+may apply.","['Open format? Yes\nWebsite iso.org/standard/75839\n.html\nThe maximum size of an Acrobat\nPDF page, superimposed on a map of\nEurope.\nWikimedia Commons has\nmedia related to Portable\nDocument Format.\n[show] ·  · \n[show] ·  · \n[show] ·  · \n[show] ·  · \n[show]\nFrom Wikipedia, the free encyclopedia\nThis article is about the technical specifics and history of the PDF document format. For other uses, see PDF (disambiguation).\nPortable Document Format (PDF), standardized as ISO 32000, is a file format\ndeveloped by Adobe in 1992 to present documents, including text formatting and\nimages, in a manner independent of application software, hardware, and operating\nsystems.[2][3] Based on the PostScript language, each PDF file encapsulates a']",,0.22362274955625216,0.0

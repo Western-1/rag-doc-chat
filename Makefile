@@ -1,5 +1,22 @@
 IMAGE_NAME=rag-service:local
 
+install:
+	pip install -r requirements.txt
+
+dev:
+	uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+eval:
+	python evaluation/run_eval.py
+
+docker-build:
+	docker compose build
+
+docker-up:
+	docker compose up
+
+docker-down:
+	docker compose down
+
 build:
 	docker build -t $(IMAGE_NAME) .
 

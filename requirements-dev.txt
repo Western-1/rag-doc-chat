@@ -1,0 +1,8 @@
+-r requirements.txt
+ragas
+datasets
+pandas
+openpyxl
+pytest
+ruff
+ipykernel
