@@ -27,7 +27,7 @@ Talk_to_Your_Docs_RAG_System/
 ├── src/
 │   ├── main.py          # Entry point (FastAPI + Langserve)
 │   ├── ingestion.py     # ETL: Load, Sanitize, Chunk PDFs
-│   ├── rag.py           # AG Engine with .with_config()
+│   ├── rag.py           # RAG Engine with .with_config()
 │   └── config.py        # Environment configuration
 ├── tests/               # Pytest integration tests
 ├── docker-compose.yml   # Local deployment orchestration
@@ -159,7 +159,7 @@ Below is a trace of a complex query where the system retrieves context from a 10
 
 | Query Type           | Input Tokens | Output Tokens | Total Tokens | Result            |
 |----------------------|:------------:|:-------------:|:------------:|-------------------|
-| General (Hello)      | 71           | 108           | 179          | General Response  |
+| General (Hello)      | 71           | 10            | 81           | General Response  |
 | RAG (via PDF)        | 890          | 50            | 940          | Grounded Answer   |
 
 
