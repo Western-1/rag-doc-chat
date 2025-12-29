@@ -7,6 +7,8 @@
 ![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker) 
 ![Kubernetes](https://img.shields.io/badge/Kubernetes-Ready-326CE5?logo=kubernetes) 
 ![Ragas](https://img.shields.io/badge/Evaluation-Ragas-green)
+![Langfuse](https://img.shields.io/badge/Observability-Langfuse-blueviolet)
+![Langserve](https://img.shields.io/badge/Framework-Langserve-white)
 
 ## 📌 Project Overview
 **Talk to Your Docs** is a production-ready microservice for intelligent document analysis and retrieval (RAG). Built with MLOps principles, the project includes containerization, data sanitization pipelines, persistent indexing, and automated evaluation.
@@ -23,9 +25,9 @@ Talk_to_Your_Docs_RAG_System/
 ├── k8s/                 # Kubernetes manifests (Deployment, Service, StatefulSet)
 ├── qdrant_db/           # Persistent vector storage
 ├── src/
-│   ├── main.py          # FastAPI entry point
+│   ├── main.py          # Entry point (FastAPI + Langserve)
 │   ├── ingestion.py     # ETL: Load, Sanitize, Chunk PDFs
-│   ├── rag.py           # RAG Engine Class (Llama 4 + Qdrant)
+│   ├── rag.py           # AG Engine with .with_config()
 │   └── config.py        # Environment configuration
 ├── tests/               # Pytest integration tests
 ├── docker-compose.yml   # Local deployment orchestration
@@ -68,10 +70,18 @@ Talk_to_Your_Docs_RAG_System/
 
 - **Resilience:** Retry logic to handle transient API issues (429/413 errors).
 
-![LLM Chat answer](images/playground_chat.png)
 
 ### 3. Automated Evaluation Pipeline (QA)
 Uses the **Ragas** framework to benchmark answer quality against source documents and track metrics over time.
+
+### 4. Observability & Monitoring
+- **Langfuse Integration:** Full tracing of every request, including retrieval context, prompt construction, and LLM latency.
+
+- **Performance Tracking:** Real-time monitoring of token usage, execution time, and success rates.
+
+- **Interactive Playground:** Built-in Langserve UI for rapid prototyping and testing of RAG chains.
+
+![LLM Chat answer](images/playground_chat.png)
 
 **Latest Benchmark Results:**
 
@@ -125,10 +135,33 @@ uvicorn src.main:app --reload
 - **Unit Tests:** `pytest` for API and integration tests.
 - **Evaluation:** `python evaluation/run_eval.py` generates quality reports.
 
-## 👨‍💻 API Endpoints
+## 👨‍💻 API Endpoints & Interfaces
 - `POST /ingest` — Upload and index a PDF document.
-- `POST /chat` — Query the indexed knowledge base.
-- `GET /health` — System status check.
+- `POST /chat` — Query the indexed knowledge base with full tracing.
+- `GET /metrics` — Prometheus-compatible metrics endpoint.
+- `GET /playground/playground` — Interactive UI for testing RAG logic (Langserve).
+
+## 🔍 System in Action & Observability
+
+We use **Langfuse** to trace every step of the RAG pipeline. This allows us to monitor retrieval quality, latency, and token consumption in real-time.
+
+### Real-Time Tracing Example
+Below is a trace of a complex query where the system retrieves context from a 100-page PDF:
+
+![Langfuse Trace](images/langfuse_rag_trace.png)
+
+**Key Insights from the Trace:**
+- **Context Injection:** Notice the jump from ~80 tokens (baseline) to **940 tokens**, confirming that relevant chunks were successfully retrieved and injected into the prompt.
+- **Latency Tracking:** The end-to-end response time (including retrieval and generation) is captured for performance bottleneck analysis.
+- **Granular Steps:** Each trace contains 9 "Observation Levels," covering everything from the initial query to the final LLM output.
+
+## Compare
+
+| Query Type           | Input Tokens | Output Tokens | Total Tokens | Result            |
+|----------------------|:------------:|:-------------:|:------------:|-------------------|
+| General (Hello)      | 71           | 108           | 179          | General Response  |
+| RAG (via PDF)        | 890          | 50            | 940          | Grounded Answer   |
+
 
 ## 🔓 License 
 
