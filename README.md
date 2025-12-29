@@ -1,131 +1,136 @@
+# 📘 Talk to Your Docs – Enterprise RAG System
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.12-blue" alt="Python 3.12">
-  <img src="https://img.shields.io/badge/FastAPI-0.110+-green" alt="FastAPI">
-  <img src="https://img.shields.io/badge/VectorDB-Qdrant-red" alt="Qdrant">
-  <img src="https://img.shields.io/badge/Docker-Containerized-blue" alt="Docker">
-</p>
+![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python) 
+![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi) 
+![Qdrant](https://img.shields.io/badge/VectorDB-Qdrant-red?logo=qdrant) 
+![Llama 4](https://img.shields.io/badge/LLM-Llama_4_Scout-orange?logo=meta) 
+![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker) 
+![Kubernetes](https://img.shields.io/badge/Kubernetes-Ready-326CE5?logo=kubernetes) 
+![Ragas](https://img.shields.io/badge/Evaluation-Ragas-green)
 
-# Talk to Your Docs – RAG Inference Service
+## 📌 Project Overview
+**Talk to Your Docs** is a production-ready microservice for intelligent document analysis and retrieval (RAG). Built with MLOps principles, the project includes containerization, data sanitization pipelines, persistent indexing, and automated evaluation.
 
-## Description
-This repository contains a **production‑oriented Retrieval‑Augmented Generation (RAG) service** designed to ingest PDF documents, index them into a vector database, and answer user queries using Large Language Models (LLMs).
+The system ingests PDFs, cleans the text, chunks content for semantic retrieval, indexes embeddings in a vector store, and uses an LLM to answer user queries grounded in source documents.
 
-The service is implemented as a containerized microservice and follows **MLOps‑ready** design principles: reproducibility, persistence, clear configuration, and API‑first interaction.
+## 🏗 Architecture & Structure
+Modular layered architecture for scalability and maintainability.
 
-## Architecture Overview
-The system follows a standard RAG pipeline:
+```plaintext
+Talk_to_Your_Docs_RAG_System/
+├── .github/             # CI/CD (GitHub Actions for linting & tests)
+├── evaluation/          # Ragas pipeline: evaluation scripts & reports
+├── k8s/                 # Kubernetes manifests (Deployment, Service, StatefulSet)
+├── qdrant_db/           # Persistent vector storage
+├── src/
+│   ├── main.py          # FastAPI entry point
+│   ├── ingestion.py     # ETL: Load, Sanitize, Chunk PDFs
+│   ├── rag.py           # RAG Engine Class (Llama 4 + Qdrant)
+│   └── config.py        # Environment configuration
+├── tests/               # Pytest integration tests
+├── docker-compose.yml   # Local deployment orchestration
+├── Dockerfile           # Multi-stage Docker build
+└── Makefile             # Utility commands
+```
 
-1. **Document ingestion** (PDF upload)
-2. **Text extraction & chunking**
-3. **Embedding generation**
-4. **Vector storage (persistent)**
-5. **Similarity search**
-6. **LLM‑based answer generation**
+## 💻 Technology Stack
 
-## Technology Stack
 - **Language:** Python 3.12
+
 - **Web Framework:** FastAPI
+
 - **RAG Framework:** LangChain (LCEL)
-- **LLM Provider:** Google Gemini 2.5 Flash
-- **Embedding Model:** Google Text Embedding 004
-- **Vector Database:** Qdrant (local persistent mode)
-- **Containerization:** Docker (slim image)
-- **API UI:** Swagger + LangServe Playground
 
-## Key Features
-- Persistent vector storage across container restarts
-- Optimized retrieval configuration for factual accuracy
-- Stateless application layer
-- Docker‑ready for local, staging, and cloud deployment
-- Interactive playground for debugging and validation
-- Clear separation between ingestion and inference
+- **LLM Provider:** Groq (Meta Llama 4 Scout)
 
-## Project Structure
-```
-├── app/
-│   └── main.py          # FastAPI app and RAG pipeline logic
-├── qdrant_db/           # Persistent vector database storage
-├── tests/               # API and integration tests
-├── Dockerfile           # Container build configuration
-├── .dockerignore        # Docker ignore rules
-├── requirements.txt     # Python dependencies
-└── .env                 # Environment variables (not committed)
-```
+- **Embedding Model:** HuggingFace all-MiniLM-L6-v2
 
-## Configuration
-The service requires a Google API key for LLM and embeddings.
+- **Vector Database:** Qdrant (Persistent storage)
 
-Create a `.env` file in the project root (or Copy .env.example to .env and fill in your keys.):
-```bash
-GOOGLE_API_KEY=your_google_api_key
-```
+- **Evaluation: Ragas** Framework
 
-## Build and Run (Docker)
-### Build image
-```bash
-docker build -t rag-service:local .
-```
+- **Infrastructure:** Docker, Kubernetes (K8s)
 
-### Run container with persistent storage
-```bash
-docker run -p 8000:8000 \
-  --env-file .env \
-  -v "${PWD}/qdrant_db:/app/qdrant_db" \
-  rag-service:local
-```
+- **CI/CD:** GitHub Actions + Ruff (Linter)
 
-The volume mount ensures vector indices persist across restarts.
+## 🚀 Key Features
 
-## API Endpoints
-Once running, the following endpoints are available:
-
-| Endpoint | Description |
-|--------|------------|
-| `/docs` | Swagger UI for API testing |
-| `/chat/playground` | LangServe UI for RAG interaction |
-| `POST /ingest` | Upload and index PDF documents |
+### 1. Ingestion Engine (ETL)
+- **Smart Cleaning:** Remove Wikipedia artifacts, HTML, null bytes and noisy tokens before indexing.
+- **Chunking Strategy:** Recursive splitting tuned for semantic completeness and context retention.
 
 ![ingest](images/ingest.png)
 
-## Data Ingestion Flow
-- PDFs are parsed using `PdfReader`
-- Text is split using `RecursiveCharacterTextSplitter`
-- Chunk size: `600`
-- Retrieval top‑k: `10`
-- Embeddings are generated and stored in Qdrant
-- Cosine similarity is used for nearest‑neighbor search
+### 2. Retrieval & Generation
+- **Vector Store:** Qdrant configured in persistent mode (data survives restarts).
+
+- **High-Performance LLM:** Integrated with Groq (Llama 4 Scout) for high-throughput inference.
+
+- **Resilience:** Retry logic to handle transient API issues (429/413 errors).
 
 ![LLM Chat answer](images/playground_chat.png)
 
-## MLOps Considerations
-- **Reproducibility:** Fully containerized environment
-- **Persistence:** Vector database stored outside container
-- **Scalability:** Stateless API layer, replaceable vector backend
-- **Observability (recommended):**
-  - Add structured logging
-  - Export metrics (Prometheus)
-  - Monitor Qdrant storage growth
-- **Security (recommended):**
-  - Protect ingestion endpoints
-  - Store secrets in a secret manager
-- **CI/CD (recommended):**
-  - Linting and tests on PR
-  - Docker image build & push
-  - Deployment to cloud (AWS / GCP / Azure)
+### 3. Automated Evaluation Pipeline (QA)
+Uses the **Ragas** framework to benchmark answer quality against source documents and track metrics over time.
 
-## Common Issues
-- **Docker build fails:** verify Docker daemon is running and base image is available
-- **Permission issues with qdrant_db:** ensure correct filesystem permissions
-- **Empty responses:** verify documents were ingested successfully
+**Latest Benchmark Results:**
 
-## Production Recommendations
-- Use managed Qdrant or external vector DB for scale
-- Add authentication and rate limiting
-- Implement document versioning
-- Add backup and retention policy for vector data
+| Metric             | Score | Description |
+|--------------------|:-----:|-------------|
+| Faithfulness       | 1.00  | Zero hallucinations — answers are grounded in source text. |
+| Context Utilization| 1.00  | Retriever finds exact relevant chunks. |
+| Answer Relevancy   | 0.6667  | High alignment between query and generated response. |
 
-## License
+![Evaluation result](images/Evaluation_Results.png)
+
+## 🛠 Deployment & Usage
+
+### Option A — Local (Docker Compose)
+```bash
+# 1. Configure Environment
+cp .env.example .env
+# Add your GROQ_API_KEY
+
+# 2. Launch Services
+docker-compose up --build -d
+
+# API Docs available at: http://localhost:8000/docs
+```
+
+### Option B — Kubernetes (K8s)
+```bash
+kubectl create secret generic app-secrets --from-literal=api_key=YOUR_KEY
+
+# Deploy Database
+kubectl apply -f k8s/qdrant-statefulset.yaml
+kubectl apply -f k8s/qdrant-service.yaml
+
+# Deploy API
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+```
+
+### Option C — Development
+```bash
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Run server
+uvicorn src.main:app --reload
+```
+
+## 🧪 Testing & CI/CD
+- **Linting:** `ruff` runs on each push.
+- **Unit Tests:** `pytest` for API and integration tests.
+- **Evaluation:** `python evaluation/run_eval.py` generates quality reports.
+
+## 👨‍💻 API Endpoints
+- `POST /ingest` — Upload and index a PDF document.
+- `POST /chat` — Query the indexed knowledge base.
+- `GET /health` — System status check.
+
+## 🔓 License 
 
 MIT License
 
