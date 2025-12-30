@@ -66,15 +66,31 @@ Talk_to_Your_Docs_RAG_System/
 ### 2. Retrieval & Generation
 - **Vector Store:** Qdrant configured in persistent mode (data survives restarts).
 
+![Qdrant Dashboard](images/qdrant_dashboard.png)
+*Dashboard showing the indexed chunks (points) ready for retrieval.*
+
 - **High-Performance LLM:** Integrated with Groq (Llama 4 Scout) for high-throughput inference.
 
 - **Resilience:** Retry logic to handle transient API issues (429/413 errors).
 
+### 3. Human-in-the-Loop Feedback API
+The system supports direct user feedback to improve future model performance. This is a two-step process using the **Langfuse** integration.
 
-### 3. Automated Evaluation Pipeline (QA)
+**Step 1: Chat & Get Trace ID**
+When you query the chat, the API returns both the answer and a unique `trace_id`.
+
+![Chat API Response](images/api_chat_response.png)
+
+**Step 2: Submit Feedback**
+Use the `trace_id` to submit a score (0.0 to 1.0) and a comment. This data is logged for dataset refinement.
+
+![Feedback Success](images/feedback_success.png)
+
+
+### 4. Automated Evaluation Pipeline (QA)
 Uses the **Ragas** framework to benchmark answer quality against source documents and track metrics over time.
 
-### 4. Observability & Monitoring
+### 5. Observability & Monitoring
 - **Langfuse Integration:** Full tracing of every request, including retrieval context, prompt construction, and LLM latency.
 
 - **Performance Tracking:** Real-time monitoring of token usage, execution time, and success rates.
@@ -143,7 +159,10 @@ uvicorn src.main:app --reload
 
 ## 🔍 System in Action & Observability
 
-We use **Langfuse** to trace every step of the RAG pipeline. This allows us to monitor retrieval quality, latency, and token consumption in real-time.
+We use **Langfuse** to trace every step of the RAG pipeline. Additionally, the server provides detailed logging for debugging ingestion and feedback flows.
+
+![Server Logs](images/server_logs.png)
+*Real-time server logs showing Chat interactions and Feedback ingestion.*
 
 ### Real-Time Tracing Example
 Below is a trace of a complex query where the system retrieves context from a 100-page PDF:

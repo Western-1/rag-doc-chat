@@ -3,18 +3,20 @@ import re
 from io import BytesIO
 from pypdf import PdfReader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langfuse.decorators import observe
 from src.rag import engine
 from src.config import CHUNK_SIZE, CHUNK_OVERLAP
 
 logger = logging.getLogger(__name__)
 
 def clean_text(text: str) -> str:
-    """Видаляє шум Wikipedia: [1], [show], [edit] та зайві пробіли."""
     text = text.replace('\x00', '')
     text = re.sub(r'\[.*?\]', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
+# --- MLOps: Pipeline Observability ---
+@observe(name="pdf-ingestion")
 def process_pdf(file_content: bytes, filename: str):
     try:
         logger.info(f"Starting ingestion for {filename}")

@@ -1,6 +1,6 @@
 import logging
 from langchain_groq import ChatGroq
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings # Updated import
 from langchain_qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient, models
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class RAGEngine:
     def __init__(self):
-        logger.info(f"Завантаження моделі ембедінгів: {EMBEDDING_MODEL}")
+        logger.info(f"Loading embedding model: {EMBEDDING_MODEL}")
         self.embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
         
         self.llm = ChatGroq(
@@ -23,6 +23,7 @@ class RAGEngine:
             max_retries=3 
         )
         
+        # --- MLOps: Vector Store Initialization ---
         self.client = QdrantClient(url=QDRANT_URL)
         self.vector_store = self._init_vector_store()
         self.retriever = self.vector_store.as_retriever(search_kwargs={"k": 3})
@@ -30,9 +31,9 @@ class RAGEngine:
     def _init_vector_store(self):
         try:
             self.client.get_collection(COLLECTION_NAME)
-            logger.info(f"Колекція {COLLECTION_NAME} вже існує.")
+            logger.info(f"Collection {COLLECTION_NAME} exists.")
         except Exception:
-            logger.info(f"Створення нової колекції {COLLECTION_NAME}...")
+            logger.info(f"Creating collection {COLLECTION_NAME}...")
             self.client.create_collection(
                 collection_name=COLLECTION_NAME,
                 vectors_config=models.VectorParams(size=384, distance=models.Distance.COSINE),
@@ -68,7 +69,4 @@ class RAGEngine:
 engine = RAGEngine()
 
 def get_rag_chain():
-    """
-    Цю функцію викликає main.py. Вона повертає скомпільований ланцюжок.
-    """
     return engine.get_chain()
