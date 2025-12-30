@@ -16,30 +16,41 @@ class RAGEvaluator:
 
     def generate_dataset(self):
         answers, contexts, chain = [], [], engine.get_chain()
-        print("🚀 Generating responses...")
-        for q in self.questions:
+        print("🚀 Generating responses (Safe Mode: 10s delay)...")
+        
+        for i, q in enumerate(self.questions):
+            print(f"[{i+1}/{len(self.questions)}] Processing: {q[:30]}...")
+            
             docs = engine.vector_store.as_retriever(search_kwargs={"k": 3}).invoke(q)
             contexts.append([d.page_content[:2000] for d in docs])
+            
             try:
                 ans = chain.invoke(q)
                 answers.append(ans)
             except Exception as e:
-                print(f"❌ Error on {q[:20]}: {e}")
+                print(f"❌ Error: {e}")
                 answers.append("API Failure")
-            time.sleep(1)
-        return Dataset.from_dict({"question": self.questions, "answer": answers, "contexts": contexts})
+            
+            time.sleep(10)
+            
+        return Dataset.from_dict({
+            "question": self.questions, 
+            "answer": answers, 
+            "contexts": contexts
+        })
 
     def run(self):
         try:
             count = engine.client.count(COLLECTION_NAME).count
             if count == 0:
-                print("⚠️ Qdrant collection is empty. Skipping evaluation to keep CI green.")
+                print("⚠️ Qdrant empty. Skipping.")
                 return
-        except Exception as e:
-            print(f"⚠️ Connection to Qdrant failed: {e}. Skipping evaluation.")
+        except Exception:
+            print("⚠️ Qdrant connection failed. Skipping.")
             return
 
         dataset = self.generate_dataset()
+        
         print("🚀 Running Ragas evaluation...")
         results = evaluate(
             dataset=dataset, 
@@ -54,7 +65,9 @@ class RAGEvaluator:
         print(f"\n✅ Final Metrics:\n{results}")
 
 if __name__ == "__main__":
-    qs = ["Who initiated the project that led to PDF?", 
-          "What is the ISO standard number for PDF?", 
-          "On which language is the PDF structure based?"]
+    qs = [
+        "Who initiated the project that led to PDF?", 
+        "What is the ISO standard number for PDF?", 
+        "On which language is the PDF structure based?"
+    ]
     RAGEvaluator(qs).run()
