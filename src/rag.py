@@ -96,6 +96,7 @@ class RAGEngine:
         # Text Cleaning Phase
         for doc in docs:
             content = doc.page_content
+            # Fix hyphenated words broken by newlines
             content = content.replace("-\n", "")
             # Replace newlines with spaces to maintain sentence structure
             content = content.replace("\n", " ")
@@ -144,7 +145,8 @@ class RAGEngine:
         """
         Deduplicates retrieved documents and re-ranks the top results using a cross-encoder.
         """
-        if not docs: return []
+        if not docs:
+            return []
         
         # Deduplication based on content hash
         unique_docs = []
@@ -159,7 +161,8 @@ class RAGEngine:
                 unique_docs.append(doc)
                 seen_hashes.add(doc_hash)
         
-        if not unique_docs: unique_docs = docs
+        if not unique_docs:
+            unique_docs = docs
 
         # Prepare passages for FlashRank
         passages = [

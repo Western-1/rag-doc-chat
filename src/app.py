@@ -7,7 +7,8 @@ import time
 from langfuse import Langfuse
 from langfuse.callback import CallbackHandler
 
-from src.rag import RAGEngine
+# --- OPTIMIZATION: Import shared engine ---
+from src.rag import engine as shared_engine
 from src.config import LLM_MODEL
 
 # --- 1. CONFIGURATION ---
@@ -19,8 +20,6 @@ st.set_page_config(
 )
 
 # Custom CSS Injection
-# 1. Fix toast width (prevent full-screen width).
-# 2. Styling for source context boxes.
 st.markdown("""
 <style>
     .block-container { padding-top: 2rem; }
@@ -51,10 +50,10 @@ if "langfuse" not in st.session_state:
 # --- 3. ENGINE LOADER ---
 @st.cache_resource(show_spinner=False)
 def load_rag_engine():
-    return RAGEngine()
+    # Return the globally instantiated engine to save memory
+    return shared_engine
 
 # --- 4. CUSTOM LOADING SCREEN ---
-# Displays a boot-up sequence only on first load
 if "rag_engine" not in st.session_state:
     loader_placeholder = st.empty()
     with loader_placeholder.container():
