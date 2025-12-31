@@ -8,9 +8,7 @@ UVICORN := $(VENV_BIN)/uvicorn
 # --- Local Development ---
 
 install:
-	# 1. Створюємо venv саме з назвою "venv" і без питань
 	uv venv venv --allow-existing
-	# 2. Встановлюємо пакети САМЕ В ЦЕ оточення (--python venv/bin/python)
 	uv pip install --python venv/bin/python torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 	uv pip install --python venv/bin/python -r requirements.txt
 
@@ -22,6 +20,14 @@ lint:
 
 eval:
 	$(PYTHON) evaluation/run_eval.py
+
+ui:
+	PYTHONPATH=. $(VENV_BIN)/streamlit run src/app.py
+
+clean-db:
+	@echo "🧹 Deleting collection documents_v3_multilingual..."
+	curl -X DELETE "http://localhost:6333/collections/documents_v3_multilingual"
+	@echo "\n✅ Done! Database is clean."
 
 # --- Docker ---
 

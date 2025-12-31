@@ -3,15 +3,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-INDEX_VERSION = "v1"
+# Index versioning for Qdrant collections
+INDEX_VERSION = "v5_mmr_fix"
 
+# Qdrant Connection Settings
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 COLLECTION_NAME = f"documents_{INDEX_VERSION}"
 
-EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+# Model Configuration
+# Embedding model: Multilingual MiniLM for efficient semantic search
+EMBEDDING_MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+# LLM: GPT-OSS-20B via Groq (or compatible API)
+LLM_MODEL = "openai/gpt-oss-20b"
 
-LLM_MODEL = os.getenv("LLM_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
-
-CHUNK_SIZE = 800
-CHUNK_OVERLAP = 150
-RETRIEVER_K = 5
+# Chunking Strategy
+CHUNK_SIZE = 1000
+CHUNK_OVERLAP = 200

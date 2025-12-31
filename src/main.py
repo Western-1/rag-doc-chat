@@ -1,19 +1,14 @@
 import logging
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, HTTPException
 from pydantic import BaseModel
-from langserve import add_routes
 from prometheus_fastapi_instrumentator import Instrumentator
 
-# MLOps: Observability imports
+# --- MLOps: Observability imports ---
 from langfuse import Langfuse
-from langfuse.decorators import observe, langfuse_context
+from langfuse.callback import CallbackHandler
 
-try:
-    from langfuse.callback import CallbackHandler
-except ImportError:
-    from langfuse.langchain import CallbackHandler
-
-from src.rag import get_rag_chain
+# --- FIX: Import the instantiated 'engine' directly ---
+from src.rag import engine as rag_engine
 from src.ingestion import process_pdf
 
 # --- Logging Setup ---
@@ -29,23 +24,18 @@ app = FastAPI(
 Instrumentator().instrument(app).expose(app)
 
 # --- MLOps: Tracing Setup ---
+# Initialize the global Langfuse client for scoring/feedback
 langfuse = Langfuse()
-langfuse_handler = CallbackHandler()
-
-chain = get_rag_chain()
-
-# --- MLOps: Interactive Playground ---
-add_routes(
-    app, 
-    chain.with_config({"callbacks": [langfuse_handler]}), 
-    path="/playground",
-    enable_feedback_endpoint=True 
-)
 
 # --- Data Models ---
 
 class QueryRequest(BaseModel):
     query: str
+
+class QueryResponse(BaseModel):
+    answer: str
+    trace_id: str
+    sources: list = []
 
 class FeedbackRequest(BaseModel):
     trace_id: str
@@ -54,34 +44,46 @@ class FeedbackRequest(BaseModel):
 
 # --- API Endpoints ---
 
-@app.post("/chat")
-@observe(name="chat-endpoint")
+@app.post("/chat", response_model=QueryResponse)
 async def chat_endpoint(request: QueryRequest):
     """
-    Executes RAG logic with automatic tracing.
+    Executes the full RAG pipeline:
+    1. Multi-query generation
+    2. Deep vector retrieval
+    3. Cross-encoder reranking
+    4. Answer generation with Langfuse tracing
     """
     try:
-        logger.info(f"Query: {request.query}")
+        logger.info(f"Received query: {request.query}")
         
-        langchain_handler = langfuse_context.get_current_langchain_handler()
+        # Create a fresh callback handler for this specific request to track the trace
+        langfuse_handler = CallbackHandler()
         
-        response = chain.invoke(request.query, config={"callbacks": [langchain_handler]})
+        # Invoke the engine
+        answer, sources, trace_id = rag_engine.get_answer_with_sources(
+            query=request.query, 
+            callbacks=[langfuse_handler]
+        )
         
-        current_trace_id = langfuse_context.get_current_trace_id()
+        # Fallback if trace_id wasn't captured by the handler
+        if not trace_id and langfuse_handler.get_trace_id():
+            trace_id = langfuse_handler.get_trace_id()
         
         return {
-            "answer": response,
-            "trace_id": current_trace_id 
+            "answer": answer,
+            "trace_id": trace_id or "unknown",
+            "sources": sources
         }
+
     except Exception as e:
         logger.error(f"Inference failure: {e}")
-        raise HTTPException(status_code=500, detail="Internal inference error")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/feedback")
 async def feedback_endpoint(request: FeedbackRequest):
     """
-    Records human-in-the-loop feedback.
-    FIX: Uses direct client instead of context for async scoring.
+    Records human-in-the-loop feedback (scores) to Langfuse.
+    This is critical for evaluating RAG performance over time.
     """
     try:
         langfuse.score(
@@ -101,9 +103,11 @@ async def ingest_endpoint(
     file: UploadFile = File(...)
 ):
     """
-    Asynchronous ingestion.
+    Accepts PDF uploads and processes them in the background 
+    to prevent blocking the main thread.
     """
     content = await file.read()
+    
     background_tasks.add_task(process_pdf, content, file.filename)
     
     return {
@@ -113,4 +117,5 @@ async def ingest_endpoint(
 
 @app.get("/health")
 def health():
+    """Kubernetes/Docker health check endpoint."""
     return {"status": "healthy"}
