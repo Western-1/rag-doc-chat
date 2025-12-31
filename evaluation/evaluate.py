@@ -3,21 +3,20 @@ import sys
 import logging
 import time
 
-# --- ФІКС ШУМУ ---
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger("groq").setLevel(logging.WARNING)
 logging.getLogger("qdrant_client").setLevel(logging.WARNING)
 logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
 
-import pandas as pd
-from datasets import Dataset
-from ragas import evaluate, RunConfig
-from ragas.metrics import Faithfulness, ContextPrecision, AnswerSimilarity
+import pandas as pd  # noqa: E402
+from datasets import Dataset  # noqa: E402
+from ragas import evaluate, RunConfig  # noqa: E402
+from ragas.metrics import Faithfulness, ContextPrecision, AnswerSimilarity  # noqa: E402
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from src.rag import engine
-from src.config import COLLECTION_NAME
+from src.rag import engine  # noqa: E402
+from src.config import COLLECTION_NAME  # noqa: E402
 
 class RAGEvaluator:
     def __init__(self, questions, ground_truths=None):

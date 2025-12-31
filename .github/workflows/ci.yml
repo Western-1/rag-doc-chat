@@ -70,13 +70,25 @@ jobs:
       run: |
         python -c "from src.rag import engine; print('✅ RAG Engine initialized successfully')"
 
-    - name: Run RAG Evaluation
+    - name: Run RAG Evaluation (Conditional)
       env:
         GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         QDRANT_URL: "http://localhost:6333"
         PYTHONPATH: .
       run: |
-        python evaluation/evaluate.py
+        if [ -z "$GROQ_API_KEY" ]; then
+          echo "⚠️ GROQ_API_KEY not found or empty. Skipping evaluation step."
+          exit 0
+        fi
+        
+        if [ -f "evaluation/evaluate.py" ]; then
+            python evaluation/evaluate.py
+        elif [ -f "evaluation/run_eval.py" ]; then
+            python evaluation/run_eval.py
+        else
+            echo "❌ Evaluation script not found!"
+            exit 1
+        fi
       continue-on-error: true
 
     - name: Upload Evaluation Report
