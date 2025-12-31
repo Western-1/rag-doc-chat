@@ -28,3 +28,5 @@ data/
 downloads/
 qdrant_db
 minikube-linux-amd64
+opt/
+opt
