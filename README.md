@@ -323,6 +323,11 @@ Implementing **Deep Retrieval (k=50)** combined with **FlashRank** significantly
 | **Precision** | 72% | **89%** |
 | **Hallucination Rate** | Low | **Near Zero** |
 
+### 🖥️ Live Evaluation Output
+Below is a screenshot from a local execution of the evaluation pipeline (`evaluation/evaluate.py`). It confirms the high **Faithfulness (1.0)** and solid **Context Precision (0.87)** metrics on the test dataset.
+
+![Ragas Terminal Execution](images/evaluate_results.png)
+
 ## Sources after answer
 
 ![Langfuse Trace](images/Sources.png)

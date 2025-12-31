@@ -53,7 +53,7 @@ jobs:
         from src.rag import engine;
         from langchain.schema import Document;
         docs = [
-            Document(page_content='PDF test doc', metadata={'source': 'test'})
+            Document(page_content='PDF test doc content about Dr. John Warnock and ISO 32000.', metadata={'source': 'test'})
         ];
         engine.vector_store.add_documents(docs);
         print('✅ Test data ingested - DB Connection OK');
@@ -69,3 +69,19 @@ jobs:
         PYTHONPATH: .
       run: |
         python -c "from src.rag import engine; print('✅ RAG Engine initialized successfully')"
+
+    - name: Run RAG Evaluation
+      env:
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        QDRANT_URL: "http://localhost:6333"
+        PYTHONPATH: .
+      run: |
+        python evaluation/evaluate.py
+      continue-on-error: true
+
+    - name: Upload Evaluation Report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: rag-evaluation-report
+        path: evaluation/report.csv
