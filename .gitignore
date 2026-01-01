@@ -30,3 +30,5 @@ qdrant_db
 minikube-linux-amd64
 opt/
 opt
+wandb
+wandb/
