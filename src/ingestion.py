@@ -4,7 +4,7 @@ import os
 import hashlib
 from io import BytesIO
 from typing import List
-
+import re
 from pypdf import PdfReader
 from langchain.docstore.document import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter

@@ -15,15 +15,10 @@ scrape_configs:
   # Prometheus self-monitoring
   - job_name: 'prometheus'
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ['prometheus:9090']
 
   # Optional: Qdrant metrics
   - job_name: 'qdrant'
     static_configs:
       - targets: ['qdrant:6333']
     metrics_path: '/metrics'
-
-# Storage configuration
-storage:
-  tsdb:
-    retention: 15d  # Keep 15 days of data
