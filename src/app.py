@@ -1,210 +1,223 @@
-import streamlit as st
-import os
-import tempfile
-import time
+import logging
+from fastapi import FastAPI, UploadFile, File, BackgroundTasks, HTTPException
+from pydantic import BaseModel
+from prometheus_fastapi_instrumentator import Instrumentator
 
-# --- MLOps Imports ---
 from langfuse import Langfuse
-from langfuse.callback import CallbackHandler
 
-# --- OPTIMIZATION: Import shared engine ---
-from src.rag import engine as shared_engine
-from src.config import LLM_MODEL
+# Compatibility import for observe
+try:
+    from langfuse import observe
+except Exception:
+    try:
+        from langfuse.decorators import observe
+    except Exception:
+        def observe(name=None):
+            def _decorator(fn):
+                return fn
+            return _decorator
 
-# --- 1. CONFIGURATION ---
-st.set_page_config(
-    page_title="RAG Chatbot", 
-    page_icon="🤖", 
-    layout="wide",
-    initial_sidebar_state="expanded"
+from src.rag import engine as rag_engine
+from src.ingestion import process_pdf
+
+# --- Logging Setup ---
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("RAG-API")
+
+app = FastAPI(
+    title="Talk To Your Docs - MLOps Edition",
+    version="3.0.0"
 )
 
-# Custom CSS Injection
-# 1. Fix toast width (prevent full-screen width).
-# 2. Styling for source context boxes.
-st.markdown("""
-<style>
-    .block-container { padding-top: 2rem; }
+# --- MLOps: Metrics (Prometheus) ---
+Instrumentator().instrument(app).expose(app)
+
+# --- MLOps: Tracing Setup (Langfuse v3) ---
+langfuse = Langfuse()
+
+# --- Data Models ---
+class QueryRequest(BaseModel):
+    query: str
+
+class QueryResponse(BaseModel):
+    answer: str
+    trace_id: str
+    sources: list = []
+
+class FeedbackRequest(BaseModel):
+    trace_id: str
+    score: float
+    comment: str = None
+
+# --- API Endpoints ---
+@app.post("/chat", response_model=QueryResponse)
+@observe(name="api_chat_endpoint")
+async def chat_endpoint(request: QueryRequest):
+    """
+    Main inference endpoint for RAG pipeline (v3 compatible).
+    """
+    try:
+        logger.info(f"Received query: {request.query}")
+        
+        answer, sources, trace_id = rag_engine.get_answer_with_sources(
+            query=request.query
+        )
+        
+        if not trace_id or trace_id == "unknown":
+            logger.warning("No trace_id returned from engine")
+        
+        return {
+            "answer": answer,
+            "trace_id": trace_id or "unknown",
+            "sources": sources
+        }
+
+    except Exception as e:
+        logger.exception("Inference failure")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/feedback")
+async def feedback_endpoint(request: FeedbackRequest):
+    """
+    Human-in-the-loop feedback collection with WORKING v3 API.
     
-    /* Source box styling */
-    .source-box {
-        font-size: 0.85em;
-        padding: 8px;
-        margin-top: 2px;
-        border-radius: 5px;
-        border-left: 3px solid #ff4b4b;
-        background-color: rgba(128, 128, 128, 0.05);
-    }
-    
-    /* Toast notification styling fix */
-    div[data-testid="stToast"] {
-        width: fit-content;
-        min-width: 200px;
-        padding: 1rem;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# --- 2. INIT MLOPS ---
-if "langfuse" not in st.session_state:
-    st.session_state.langfuse = Langfuse()
-
-# --- 3. ENGINE LOADER ---
-@st.cache_resource(show_spinner=False)
-def load_rag_engine():
-    # Return the globally instantiated engine to save memory
-    return shared_engine
-
-# --- 4. CUSTOM LOADING SCREEN ---
-# Displays a boot-up sequence only on first load
-if "rag_engine" not in st.session_state:
-    loader_placeholder = st.empty()
-    with loader_placeholder.container():
-        st.markdown("<div style='height: 20vh'></div>", unsafe_allow_html=True)
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            with st.status("🚀 Booting up AI System...", expanded=True) as status:
-                st.write("🔌 Connecting to 20B LLM...")
-                time.sleep(0.5)
-                st.write("📡 Initializing Observability (Langfuse)...")
-                st.write("💾 Connecting to Qdrant Database...")
-                st.session_state.rag_engine = load_rag_engine()
-                status.update(label="✅ System Online!", state="complete", expanded=False)
-                time.sleep(1)
-    loader_placeholder.empty()
-
-engine = st.session_state.rag_engine
-
-# --- 5. SESSION HISTORY ---
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-# --- 6. SIDEBAR ---
-with st.sidebar:
-    st.title("📄 Document AI")
-    st.caption(f"Engine: **{LLM_MODEL}**")
-    
-    st.markdown("---")
-    uploaded_file = st.file_uploader("Upload PDF Document", type=["pdf"])
-    
-    if uploaded_file:
-        if st.button("⚡ Process & Index", type="primary", use_container_width=True):
-            with st.status("Ingesting Document...", expanded=True) as status:
-                st.write("📥 Reading file...")
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-                    tmp_file.write(uploaded_file.getvalue())
-                    tmp_path = tmp_file.name
-                
-                st.write("🧠 Vectorizing & Deduping...")
-                try:
-                    num_chunks = engine.ingest_file(tmp_path)
-                    os.remove(tmp_path)
-                    status.update(label=f"✅ Indexed {num_chunks} chunks.", state="complete", expanded=False)
-                except Exception as e:
-                    status.update(label="❌ Failed", state="error")
-                    st.error(f"Error: {e}")
-
-    st.markdown("---")
-    
-    if st.button("🧹 Clear Chat History", use_container_width=True):
-        st.session_state.messages = []
-        st.rerun()
-
-    if st.button("🔥 Reset Database (Delete All)", type="secondary", use_container_width=True):
-        if engine.clear_database():
-            st.toast("Database cleared!", icon="🗑️")
-            st.session_state.messages = []
-            time.sleep(1)
-            st.rerun()
-        else:
-            st.error("Failed to clear database.")
-
-# --- 7. CHAT INTERFACE ---
-st.subheader("💬 Chat with your Knowledge Base")
-
-for idx, msg in enumerate(st.session_state.messages):
-    with st.chat_message(msg["role"]):
-        if msg["role"] == "user":
-            st.write(msg["content"])
-        else:
-            # 1. Response Text (st.code provides a native copy button)
-            st.code(msg["content"], language=None, wrap_lines=True)
-            
-            # Layout: Sources (Left/Wide) | Spacer | Feedback (Right/Narrow)
-            col_sources, col_spacer, col_feedback = st.columns([6, 1, 2])
-            
-            with col_sources:
-                if "sources" in msg and msg["sources"]:
-                    with st.expander("📚 Sources / Context"):
-                        for s in msg["sources"]:
-                            page = s['meta'].get('page', 0) + 1
-                            text_preview = s['text'].replace("\n", " ").strip()[:200]
-                            st.markdown(f"<div class='source-box'><b>Page {page}</b>: {text_preview}...</div>", unsafe_allow_html=True)
-
-            with col_feedback:
-                # 2. User Feedback (Thumbs Up/Down)
-                key = f"fb_{idx}"
-                score = st.feedback("thumbs", key=key)
-                
-                if score is not None:
-                    trace_id = msg.get("trace_id")
-                    if trace_id:
-                        # Convert Streamlit score (0/1) to Langfuse format
-                        value = 1.0 if score == 1 else 0.0
-                        
-                        st.session_state.langfuse.score(
-                            trace_id=trace_id,
-                            name="user-feedback",
-                            value=value,
-                            comment="Streamlit UI"
-                        )
-                        st.toast("Thanks for feedback!", icon="✨")
-
-# --- 8. INPUT HANDLING ---
-if prompt := st.chat_input("Ask about your PDF..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.write(prompt)
-
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            try:
-                # Initialize Langfuse Handler for this run
-                langfuse_handler = CallbackHandler()
-                
-                response_text, sources, trace_id = engine.get_answer_with_sources(
-                    prompt, 
-                    callbacks=[langfuse_handler]
+    Fixed: Uses correct Langfuse v3 SDK methods.
+    """
+    try:
+        logger.info(f"Recording feedback for trace: {request.trace_id}, score: {request.score}")
+        
+        # === METHOD 1: Try langfuse.score() (v3 SDK) ===
+        try:
+            langfuse.score(
+                trace_id=request.trace_id,
+                name="user-feedback",
+                value=request.score,
+                comment=request.comment or ""
+            )
+            # Flush to ensure it's sent immediately
+            langfuse.flush()
+            logger.info("✅ Feedback sent via langfuse.score()")
+            return {"status": "success", "message": "Telemetry recorded (method 1)"}
+        except AttributeError as e:
+            logger.warning(f"Method 1 failed (AttributeError): {e}")
+        except Exception as e:
+            logger.warning(f"Method 1 failed: {e}")
+        
+        # === METHOD 2: Try create_score() ===
+        try:
+            langfuse.create_score(
+                trace_id=request.trace_id,
+                name="user-feedback",
+                value=request.score,
+                comment=request.comment or ""
+            )
+            langfuse.flush()
+            logger.info("✅ Feedback sent via create_score()")
+            return {"status": "success", "message": "Telemetry recorded (method 2)"}
+        except AttributeError as e:
+            logger.warning(f"Method 2 failed (AttributeError): {e}")
+        except Exception as e:
+            logger.warning(f"Method 2 failed: {e}")
+        
+        # === METHOD 3: Try client.score() ===
+        try:
+            # Access internal client if available
+            if hasattr(langfuse, 'client'):
+                langfuse.client.score(
+                    trace_id=request.trace_id,
+                    name="user-feedback",
+                    value=request.score,
+                    comment=request.comment or ""
                 )
-                
-                # Streaming/Typing effect simulation
-                placeholder = st.empty()
-                full_res = ""
-                for chunk in response_text.split():
-                    full_res += chunk + " "
-                    time.sleep(0.02)
-                    placeholder.markdown(full_res + "▌")
-                
-                # Final render using st.code to enable copy functionality
-                placeholder.code(full_res, language=None, wrap_lines=True)
-                
-                # Optional: Display sources immediately after generation
-                if sources:
-                    with st.expander("📚 Sources / Context"):
-                        for s in sources:
-                            page = s['meta'].get('page', 0) + 1
-                            text_preview = s['text'].replace("\n", " ").strip()[:200]
-                            st.markdown(f"<div class='source-box'><b>Page {page}</b>: {text_preview}...</div>", unsafe_allow_html=True)
+                langfuse.flush()
+                logger.info("✅ Feedback sent via client.score()")
+                return {"status": "success", "message": "Telemetry recorded (method 3)"}
+        except Exception as e:
+            logger.warning(f"Method 3 failed: {e}")
+        
+        # === METHOD 4: Try REST API directly ===
+        try:
+            import httpx
+            import os
+            
+            langfuse_host = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
+            langfuse_public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
+            langfuse_secret_key = os.getenv("LANGFUSE_SECRET_KEY")
+            
+            if not langfuse_public_key or not langfuse_secret_key:
+                raise Exception("Langfuse credentials not found in environment")
+            
+            url = f"{langfuse_host}/api/public/scores"
+            headers = {
+                "Content-Type": "application/json",
+            }
+            auth = (langfuse_public_key, langfuse_secret_key)
+            
+            payload = {
+                "traceId": request.trace_id,
+                "name": "user-feedback",
+                "value": request.score,
+                "comment": request.comment or ""
+            }
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    url,
+                    json=payload,
+                    headers=headers,
+                    auth=auth,
+                    timeout=10.0
+                )
+                response.raise_for_status()
+            
+            logger.info("✅ Feedback sent via REST API")
+            return {"status": "success", "message": "Telemetry recorded (REST API)"}
+            
+        except Exception as e:
+            logger.error(f"Method 4 (REST API) failed: {e}")
+        
+        # === ALL METHODS FAILED ===
+        logger.error("❌ All feedback methods failed")
+        raise HTTPException(
+            status_code=500, 
+            detail="Failed to record telemetry. Check Langfuse configuration."
+        )
 
-                st.session_state.messages.append({
-                    "role": "assistant", 
-                    "content": full_res,
-                    "sources": sources,
-                    "trace_id": trace_id
-                })
-                
-                # Rerun to ensure the feedback widget is rendered immediately
-                st.rerun()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Feedback ingestion failure")
+        raise HTTPException(status_code=500, detail=f"Failed to record telemetry: {str(e)}")
 
-            except Exception as e:
-                st.error(f"Error: {e}")
+
+@app.post("/ingest")
+async def ingest_endpoint(
+    background_tasks: BackgroundTasks, 
+    file: UploadFile = File(...)
+):
+    """
+    Document ingestion endpoint (async processing).
+    """
+    content = await file.read()
+    background_tasks.add_task(process_pdf, content, file.filename)
+    
+    logger.info(f"Ingestion pipeline queued for: {file.filename}")
+    return {
+        "status": "accepted", 
+        "message": f"Ingestion pipeline started for {file.filename}"
+    }
+
+@app.get("/health")
+def health():
+    """Health check for K8s/Docker."""
+    return {"status": "healthy", "version": "3.0.0"}
+
+@app.get("/")
+def root():
+    """API info."""
+    return {
+        "service": "RAG API",
+        "version": "3.0.0",
+        "mlops": "Langfuse v3 + Prometheus"
+    }
