@@ -15,6 +15,7 @@
 ![Grafana](https://img.shields.io/badge/Grafana-F46800?style=flat&logo=grafana&logoColor=white)
 ![LangChain](https://img.shields.io/badge/Framework-LangChain-121212?style=flat&logo=chainlink)
 ![Make](https://img.shields.io/badge/Automation-Makefile-008080?style=flat&logo=gnu-make&logoColor=white)
+![WandB](https://img.shields.io/badge/Experiment_Tracking-Weights_&_Biases-gold?logo=weightsandbiases)
 ---
 
 ## 💡 TL;DR — What this is
@@ -362,15 +363,29 @@ Access Grafana at `http://localhost:3000` (admin/admin)
 
 ## 🧪 Evaluation
 
-### Ragas Metrics
+### 📊 Evaluation & Tracking
+We use **Ragas** for checking quality and **Weights & Biases** for experiment tracking.
+
+![RAG Evaluation Results using W&B](images/rag-eval-metrics-wandb.png)
+
+### Running Experiments
 
 Run evaluation pipeline:
 ```bash
 make eval
-# Or: python evaluation/evaluate.py
+# Or: 
+# 1) - python evaluation/track_experiment.py
+# 2) 1) - python evaluation/evaluate.py
 ```
+**Tracked Experiment (with W&B)**
 
-**Latest Results:**
+| Metric             | Score | Description |
+|--------------------|:-----:|-------------|
+| Faithfulness       | 1.00  | Zero hallucinations |
+| Context Precision  | 1.00  | Perfect retrieval |
+| Answer Relevancy   | N/a  | (Rate limited in free tier) or 0.83 without free tier |
+
+**Latest Results (evaluate.py):**
 
 | Metric             | Score | Description |
 |--------------------|:-----:|-------------|

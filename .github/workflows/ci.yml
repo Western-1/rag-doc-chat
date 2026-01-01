@@ -1,5 +1,5 @@
 name: MLOps Pipeline (Langfuse v3)
-
+run-name: "CI Check - wandb-integration"
 on:
   push:
     branches: [ "main" ]

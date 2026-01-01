@@ -86,17 +86,20 @@ clean-all: down  ## Clean everything: stop, remove images, volumes, prune
 
 # --- Kubernetes (K8s) ---
 
-k8s-deploy:  ## Deploy to Kubernetes
+k8s-deploy:
+	@echo "🚀 Deploying Qdrant storage & database..."
+	kubectl apply -f k8s/qdrant-pvc.yaml
 	kubectl apply -f k8s/qdrant-statefulset.yaml
-	kubectl apply -f k8s/qdrant-service.yaml
+	
+	@echo "🚀 Deploying RAG API..."
 	kubectl apply -f k8s/deployment.yaml
 	kubectl apply -f k8s/service.yaml
 
 k8s-delete:  ## Delete Kubernetes resources
-	kubectl delete -f k8s/deployment.yaml || true
 	kubectl delete -f k8s/service.yaml || true
-	kubectl delete -f k8s/qdrant-service.yaml || true
+	kubectl delete -f k8s/deployment.yaml || true
 	kubectl delete -f k8s/qdrant-statefulset.yaml || true
+	kubectl delete -f k8s/qdrant-pvc.yaml || true
 
 k8s-forward:  ## Port forward Kubernetes service
 	kubectl port-forward service/rag-service 8000:8000
@@ -105,6 +108,9 @@ k8s-logs:  ## Tail logs for Kubernetes deployment
 	kubectl logs -f deployment/rag-deployment
 
 # --- Utils ---
+
+track:
+	PYTHONPATH=. $(VENV_BIN)/python evaluation/track_experiment.py
 
 clean:  ## Clean Python caches and virtual env
 	rm -rf __pycache__ .pytest_cache venv .venv
